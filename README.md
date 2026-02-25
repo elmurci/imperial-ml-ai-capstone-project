@@ -148,13 +148,6 @@ Y = np.load("data/raw/function_1/initial_outputs.npy")
 
 ---
 
-## Author
-
-Imperial College Business School — Machine Learning & AI Programme\
-Capstone Project, Modules 12-21 (2025-2026)
-
----
-
 ## License
 
 Educational use only, as part of Imperial College Executive Education programme.
