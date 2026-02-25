@@ -2,22 +2,52 @@
 
 ## Non-Technical Summary
 
-This project tackles the challenge of finding optimal inputs for eight unknown "black-box" functions—systems where we can observe outputs but cannot see the internal workings. Using Bayesian optimisation, we intelligently balance exploring new regions against exploiting known promising areas, making informed decisions with limited data. This mirrors real-world scenarios like drug discovery, manufacturing tuning, or hyperparameter optimisation where each evaluation is expensive. Over multiple rounds of iterative querying, we progressively improved outputs across functions of varying complexity (2D to 8D), demonstrating practical optimisation skills applicable to industry ML challenges.
+This project tackles the challenge of finding optimal inputs for eight unknown
+"black-box" functions—systems where we can observe outputs but cannot see the
+internal workings. Using Bayesian optimisation over 10 weekly iterations, we
+intelligently balanced exploring new regions against exploiting known promising
+areas, making informed decisions with limited data. Key breakthroughs included
+F1's diagonal discovery (3000x improvement), F4's sign reversal from negative to
+positive, and F5's remarkable climb from 1088 to 3512. This mirrors real-world
+scenarios like drug discovery, manufacturing tuning, or hyperparameter
+optimisation where each evaluation is expensive.
 
 ---
 
-## Project Overview
+## 📚 Documentation
 
-| Function | Dimensions | Initial Points | Best Output (Round 5) | Real-World Analogy |
-|----------|------------|----------------|----------------------|-------------------|
-| F1 | 2D | 10 | ~0 (searching) | Radiation detection |
-| F2 | 2D | 10 | 0.651 | Drug efficacy |
-| F3 | 3D | 15 | -0.031 | Manufacturing quality |
-| F4 | 4D | 30 | -0.0033 | Process optimisation |
-| F5 | 4D | 20 | 1808.33 | Resource allocation |
-| F6 | 5D | 20 | -0.678 | Side effect minimisation |
-| F7 | 6D | 30 | 1.390 | Robot control |
-| F8 | 8D | 40 | 9.787 | Complex system tuning |
+| Document                             | Description                                                                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| [**Datasheet**](docs/DATASHEET.md)   | Complete documentation of the dataset: motivation, composition, collection process, and limitations                         |
+| [**Model Card**](docs/MODEL_CARD.md) | Detailed description of the optimisation approach: strategy evolution, performance, assumptions, and ethical considerations |
+
+---
+
+## Results Overview
+
+### Final Performance (After Round 10)
+
+| Function | Dims | Initial Best | Final Best | Improvement     | Strategy            |
+| -------- | ---- | ------------ | ---------- | --------------- | ------------------- |
+| **F1**   | 2D   | 0            | 1.68e-5    | 🚀 Breakthrough | Diagonal discovery  |
+| **F2**   | 2D   | 0.611        | 0.651      | +6.5%           | Region refinement   |
+| **F3**   | 3D   | -0.035       | -0.0275    | +21.4%          | Gradient following  |
+| **F4**   | 4D   | -4.03        | 0.161      | 🚀 Sign change  | Consistent gradient |
+| **F5**   | 4D   | 1088.86      | 3512.03    | +222.5%         | Push to limits      |
+| **F6**   | 5D   | -0.71        | -0.669     | +5.8%           | Revert-to-best      |
+| **F7**   | 6D   | 1.365        | 1.394      | +2.1%           | Small perturbations |
+| **F8**   | 8D   | 9.60         | 9.787      | +1.9%           | Plateau refinement  |
+
+### Key Breakthroughs
+
+- **F1 (Round 9)**: After 8 rounds of near-zero outputs, discovered the optimum
+  lies along x=y diagonal
+- **F4 (Rounds 5-10)**: Achieved sign reversal from -4.03 to +0.161 through
+  consistent gradient following
+- **F5 (All rounds)**: Remarkable monotonic improvement from 1088 to 3512
+  (+222%)
+
+---
 
 ## Repository Structure
 
@@ -26,28 +56,30 @@ bbo-capstone/
 ├── README.md                 # This file
 ├── requirements.txt          # Python dependencies
 ├── data/
-│   ├── raw/                  # Original .npy files (not stored - see Data section)
+│   ├── raw/                  # Original .npy files (see data access instructions)
 │   └── processed/            # Accumulated data after each round
+├── docs/
+│   ├── DATASHEET.md          # Dataset documentation ⭐
+│   └── MODEL_CARD.md         # Model documentation ⭐
 ├── notebooks/
 │   └── bbo_optimization.ipynb    # Main analysis notebook
 ├── src/
-│   ├── surrogate.py          # Gaussian Process surrogate model
-│   ├── acquisition.py        # Acquisition function implementations
+│   ├── surrogate.py          # GP surrogate model
+│   ├── acquisition.py        # Acquisition functions
 │   └── utils.py              # Helper functions
-├── results/
-│   ├── queries.csv           # All submissions and outputs
-│   └── figures/              # Visualisations
-└── docs/
-    ├── DATASHEET.md          # Data documentation
-    └── MODEL_CARD.md         # Model documentation
+└── results/
+    ├── queries.csv           # Complete query history
+    └── figures/              # Visualisations
 ```
+
+---
 
 ## Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/[username]/bbo-capstone.git
-cd bbo-capstone
+git clone https://github.com/elmurci/imperial-ml-ai-capstone-project.git
+cd imperial-ml-ai-capstone-project
 
 # Install dependencies
 pip install -r requirements.txt
@@ -56,78 +88,73 @@ pip install -r requirements.txt
 jupyter notebook notebooks/bbo_optimization.ipynb
 ```
 
-## Data
+---
 
-The initial `.npy` data files are provided by Imperial College Business School and are not stored in this repository due to size. They can be obtained from the course portal (Mini-lesson 12.8).
+## Methodology
 
-To load data:
+### Strategy Evolution
+
+| Phase               | Rounds | Approach                    | Key Insight                             |
+| ------------------- | ------ | --------------------------- | --------------------------------------- |
+| Exploration         | 1-2    | Corner/boundary testing     | Exploitation often more reliable        |
+| Gradient Estimation | 3-5    | Directional inference       | F4/F5 have clear gradients              |
+| Exploitation        | 6-8    | Refine + revert-to-best     | Know when to abandon failed exploration |
+| Breakthrough        | 9-10   | Aggressive gradient pursuit | F1 diagonal, F5 limits                  |
+
+### Core Techniques
+
+1. **Gaussian Process Surrogate**: Approximate unknown functions with
+   uncertainty estimates
+2. **Acquisition Functions**: UCB/EI to balance exploration-exploitation
+3. **Gradient Following**: Use round-over-round changes to infer direction
+4. **Revert-to-Best**: Abandon failed refinements, return to proven queries
+
+---
+
+## Data Access
+
+Initial `.npy` data files are provided by Imperial College Business School via
+the course portal (Mini-lesson 12.8). They are not stored in this repository due
+to licensing.
+
 ```python
 import numpy as np
 X = np.load("data/raw/function_1/initial_inputs.npy")
 Y = np.load("data/raw/function_1/initial_outputs.npy")
 ```
 
-## Methodology
+---
 
-### Why Bayesian Optimisation?
+## Lessons Learned
 
-1. **Limited evaluations**: Only one query per function per week
-2. **Unknown function structure**: No access to gradients or analytical form
-3. **Exploration-exploitation trade-off**: Need to balance searching new regions vs. refining known good areas
+1. **Exploitation > Exploration** with limited queries — aggressive exploration
+   often wasted budget
+2. **Function-specific strategies** essential — one-size-fits-all approaches
+   fail
+3. **Revert-to-best** critical for noisy functions (F2, F6)
+4. **Breakthroughs unpredictable** — F1's diagonal discovery came after 8 failed
+   rounds
+5. **Diminishing returns** real for high-dimensional functions (F7, F8)
 
-### Approach
+---
 
-1. **Surrogate Model**: Gaussian Process (GP) regression to approximate the unknown function
-2. **Acquisition Function**: Upper Confidence Bound (UCB) and Expected Improvement (EI) to guide query selection
-3. **Iterative Refinement**: Update beliefs after each observation
-
-## Results Summary
-
-### Best Outputs by Round
-
-| Function | Initial Best | R1 | R2 | R3 | R4 | Trend |
-|----------|-------------|-----|-----|-----|-----|-------|
-| F1 | 0 | 0 | 0 | 2.68e-9 | 1.45e-23 | Searching |
-| F2 | 0.611 | -0.069 | 0.334 | 0.651 | 0.639 | ✅ Improved |
-| F3 | -0.035 | -0.161 | -0.122 | -0.033 | -0.031 | ✅ Improved |
-| F4 | -4.03 | -0.0055 | -0.037 | -0.338 | -0.0033 | ✅ Improved |
-| F5 | 1088.86 | 1139.17 | 1264.40 | 1484.13 | 1808.33 | 🚀 Excellent |
-| F6 | -0.71 | -1.36 | -0.737 | -0.678 | -0.680 | ✅ Improved |
-| F7 | 1.365 | 1.353 | 1.271 | 1.390 | 1.376 | ✅ Improved |
-| F8 | 9.60 | 9.78 | 9.787 | 9.782 | 9.777 | ✅ Improved |
-
-### Key Insights
-
-- **F5** showed remarkable unimodal behaviour, climbing from 1088 to 1808 (+66% improvement)
-- **F1** remains challenging—signal is extremely weak, suggesting a narrow optimum
-- **F4** demonstrated the importance of reverting to successful regions after failed exploration
-- Higher-dimensional functions (F6-F8) show slower convergence due to curse of dimensionality
-
-## Challenges & Lessons Learned
-
-1. **Exploration vs. Exploitation**: Early aggressive exploration often backfired; exploitation near known good points proved more reliable
-2. **Gradient Information**: Round-by-round output changes provided implicit gradient estimates
-3. **Dimensionality Curse**: Functions F6-F8 required more conservative step sizes
-4. **Local Optima Risk**: F1 may have multiple optima, making search difficult
-
-## Documentation
-
-- [Datasheet](docs/DATASHEET.md) - Data sources, preprocessing, and limitations
-- [Model Card](docs/MODEL_CARD.md) - Model behaviour, assumptions, and interpretability
-
-## Technologies Used
+## Technologies
 
 - Python 3.10+
-- NumPy, SciPy
+- NumPy, SciPy, Pandas
 - scikit-learn (GaussianProcessRegressor)
 - Matplotlib, Seaborn
 - Jupyter Notebooks
 
+---
+
 ## Author
 
-Imperial College Business School - Machine Learning & AI Programme  
-Capstone Project, Modules 12-25
+Imperial College Business School — Machine Learning & AI Programme\
+Capstone Project, Modules 12-21 (2025-2026)
+
+---
 
 ## License
 
-This project is for educational purposes as part of the Imperial College Executive Education programme.
+Educational use only, as part of Imperial College Executive Education programme.

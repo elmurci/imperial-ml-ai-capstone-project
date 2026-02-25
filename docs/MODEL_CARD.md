@@ -1,219 +1,268 @@
-# Model Card: Gaussian Process Surrogate for BBO
+# Model Card: BBO Optimisation Approach
 
-## Model Details
+## Overview
 
-### Model Description
-This project uses Gaussian Process (GP) regression as a surrogate model to approximate unknown black-box functions. The GP provides both predictions and uncertainty estimates, enabling informed exploration-exploitation decisions.
-
-### Model Type
-- **Primary**: Gaussian Process Regressor (scikit-learn)
-- **Alternative**: Neural Network surrogate (PyTorch) for high-dimensional functions
-
-### Model Version
-- scikit-learn GaussianProcessRegressor v1.2+
-- Custom acquisition functions built on top
-
-### Developer
-Student project for Imperial College Business School ML & AI Programme
-
-### Model Date
-January 2025 (ongoing through Module 25)
+| Field       | Description                                                         |
+| ----------- | ------------------------------------------------------------------- |
+| **Name**    | Adaptive Bayesian Black-Box Optimisation Strategy                   |
+| **Type**    | Sequential model-based optimisation with Gaussian Process surrogate |
+| **Version** | 1.0 (Final, Round 10)                                               |
+| **Author**  | Imperial College ML & AI Programme — Capstone Project               |
+| **Date**    | Modules 12-21 (10-week iteration cycle)                             |
 
 ---
 
 ## Intended Use
 
-### Primary Intended Uses
-- Approximate unknown black-box functions from limited observations
-- Guide query selection via acquisition functions
-- Balance exploration (uncertainty reduction) and exploitation (optimising known regions)
+### What tasks is this approach suitable for?
 
-### Primary Intended Users
-- Students learning Bayesian optimisation
-- Practitioners applying BO to expensive-to-evaluate functions
+- **Expensive function evaluation**: When each query has significant cost (time,
+  money, resources)
+- **Low-dimensional optimisation**: Functions with 2-6 input dimensions
+- **Smooth, continuous functions**: Where local structure predicts global
+  behaviour
+- **Sequential decision-making**: When observations inform subsequent queries
+- **Hyperparameter tuning**: Optimising ML model configurations
+- **Experimental design**: Drug discovery, manufacturing parameter tuning
 
-### Out-of-Scope Use Cases
-- Real-time production systems (GP inference is O(n³))
-- Very high-dimensional problems (>10D without dimensionality reduction)
-- Non-smooth or discontinuous functions
+### What use cases should be avoided?
 
----
-
-## Training Data
-
-### Data Sources
-Synthetic black-box function evaluations provided by Imperial College
-
-### Data Volume
-| Function | Initial Points | After Round 5 |
-|----------|----------------|---------------|
-| F1 (2D) | 10 | 15 |
-| F2 (2D) | 10 | 15 |
-| F3 (3D) | 15 | 20 |
-| F4 (4D) | 30 | 35 |
-| F5 (4D) | 20 | 25 |
-| F6 (5D) | 20 | 25 |
-| F7 (6D) | 30 | 35 |
-| F8 (8D) | 40 | 45 |
-
-### Preprocessing
-- Input normalisation: Already in [0, 1) range
-- Output normalisation: Applied per-function for numerical stability
+- **High-dimensional spaces (>10D)**: Curse of dimensionality limits
+  effectiveness
+- **Discrete/combinatorial inputs**: Strategy assumes continuous search space
+- **Highly multimodal functions**: May converge to local optima
+- **Noisy functions without replication**: Cannot distinguish signal from noise
+- **Real-time optimisation**: Weekly iteration cycle inappropriate for
+  latency-sensitive applications
+- **Functions with discontinuities**: Smoothness assumption will fail
 
 ---
 
-## Model Architecture
+## Details: Strategy Evolution Across Ten Rounds
 
-### Gaussian Process Configuration
+### Phase 1: Exploration (Rounds 1-2)
 
-```python
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
+**Approach**: Boundary testing, corner sampling, initial exploitation near seed
+data's best points.
 
-kernel = ConstantKernel(1.0) * RBF(length_scale=0.5) + WhiteKernel(noise_level=0.1)
+**Key decisions**:
 
-gp = GaussianProcessRegressor(
-    kernel=kernel,
-    n_restarts_optimizer=10,
-    normalize_y=True,
-    random_state=42
-)
-```
+- F1: Tested corners (0,1) and (1,0) — both yielded zero
+- F2, F3: Explored edges based on GP uncertainty estimates
+- F4-F8: Exploited promising regions from initial data
 
-### Kernel Choice Rationale
-- **RBF (Radial Basis Function)**: Assumes smooth, continuous functions
-- **ConstantKernel**: Scales overall variance
-- **WhiteKernel**: Captures observation noise
+**Lessons learned**: Aggressive exploration often failed; exploitation near
+known good points more reliable.
 
-### Acquisition Functions
+### Phase 2: Gradient Estimation (Rounds 3-5)
 
-1. **Upper Confidence Bound (UCB)**
-   ```
-   UCB(x) = μ(x) + β * σ(x)
-   ```
-   - β controls exploration-exploitation trade-off
-   - Higher β → more exploration
+**Approach**: Used output changes between rounds to infer directional gradients.
 
-2. **Expected Improvement (EI)**
-   ```
-   EI(x) = E[max(f(x) - f_best, 0)]
-   ```
-   - Focuses on probability of improvement over current best
+**Key decisions**:
+
+- F1: Center (0.5, 0.5) found first non-zero signal (2.68e-9)
+- F4: Discovered sign change from negative to positive — major breakthrough
+- F5: Identified X3, X4 as primary drivers; began systematic increase
+
+**Techniques**: Implicit gradient descent using round-over-round comparisons;
+step size tuning per function.
+
+### Phase 3: Exploitation Focus (Rounds 6-8)
+
+**Approach**: Refined successful regions; implemented "revert-to-best" when
+refinements failed.
+
+**Key decisions**:
+
+- F2, F3, F6: Reverted to earlier successful queries after regressions
+- F4: Continued gradient following (0.016 → 0.064 → 0.105)
+- F5: Pushed X3, X4 toward upper bounds (1808 → 2271 → 2717)
+- F7: Small perturbations around plateau
+
+**Techniques**: Conservative step sizes; function-specific strategies; portfolio
+approach balancing exploration/exploitation.
+
+### Phase 4: Breakthrough Exploitation (Rounds 9-10)
+
+**Approach**: Aggressive pursuit of discovered gradients; diagonal discovery for
+F1.
+
+**Key breakthroughs**:
+
+- F1: Diagonal direction (0.55, 0.55) → (0.57, 0.57) yielded 3000x improvement
+- F4: Continued climb to 0.161
+- F5: Broke 3500 barrier (3512)
+- F7: Achieved new best through continued small steps
 
 ---
 
-## Evaluation
+## Performance
 
-### Metrics
-- **Best output found**: Primary success metric
-- **Cumulative regret**: Difference from (unknown) true optimum
-- **Convergence rate**: Improvement per query
+### Results Summary (After Round 10)
 
-### Results by Function (After Round 4)
+| Function | Initial Best | Final Best | Improvement         | Status          |
+| -------- | ------------ | ---------- | ------------------- | --------------- |
+| F1       | 0            | 1.68e-5    | ∞ (from zero)       | 🚀 Breakthrough |
+| F2       | 0.611        | 0.651      | +6.5%               | ⚠️ Plateaued    |
+| F3       | -0.035       | -0.0275    | +21.4%              | ✅ Improved     |
+| F4       | -4.03        | 0.161      | +104% (sign change) | 🚀 Excellent    |
+| F5       | 1088.86      | 3512.03    | +222.5%             | 🚀 Outstanding  |
+| F6       | -0.71        | -0.669     | +5.8%               | ⚠️ Unstable     |
+| F7       | 1.365        | 1.394      | +2.1%               | ✅ Steady       |
+| F8       | 9.60         | 9.787      | +1.9%               | ⚠️ Plateaued    |
 
-| Function | Initial Best | Current Best | Improvement |
-|----------|-------------|--------------|-------------|
-| F1 | 0 | ~0 | Searching |
-| F2 | 0.611 | 0.651 | +6.5% |
-| F3 | -0.035 | -0.031 | +11.4% |
-| F4 | -4.03 | -0.0033 | +99.9% |
-| F5 | 1088.86 | 1808.33 | +66.1% |
-| F6 | -0.71 | -0.678 | +4.5% |
-| F7 | 1.365 | 1.390 | +1.8% |
-| F8 | 9.60 | 9.787 | +1.9% |
+### Metrics Used
 
-### Evaluation Limitations
-- True optima unknown until course completion
-- Limited queries prevent extensive validation
-- No cross-validation due to sequential nature
+- **Primary**: Best output value achieved (maximisation objective)
+- **Secondary**: Round-over-round improvement rate
+- **Diagnostic**: Reversion frequency (indicator of strategy instability)
+
+### Performance by Function Characteristics
+
+| Characteristic           | Functions | Performance     | Notes                       |
+| ------------------------ | --------- | --------------- | --------------------------- |
+| Clear gradient           | F4, F5    | Excellent       | Consistent improvement      |
+| Sparse/narrow optimum    | F1        | Good (after R9) | Required diagonal discovery |
+| Noisy/unstable           | F2, F6    | Moderate        | Frequent reversions needed  |
+| High-dimensional plateau | F7, F8    | Limited         | Diminishing returns         |
+
+---
+
+## Assumptions and Limitations
+
+### Key Assumptions
+
+1. **Local smoothness**: Small input changes produce small output changes
+   - _Impact_: Enables gradient-following; fails for discontinuous functions
+   - _Evidence_: Validated for F4, F5; questionable for F2
+
+2. **Unimodality**: Single global optimum dominates
+   - _Impact_: Exploitation-heavy strategy converges to local region
+   - _Risk_: May miss superior global optima
+
+3. **Stationarity**: Function behaviour consistent across search space
+   - _Impact_: Strategies learned in one region transfer elsewhere
+   - _Limitation_: F1's narrow diagonal suggests non-stationary structure
+
+4. **Low noise**: Outputs reliably reflect true function values
+   - _Impact_: Single queries sufficient; no replication needed
+   - _Risk_: F2's inconsistency suggests possible noise
+
+### Constraints
+
+1. **Query budget**: One query per function per week (10 total)
+2. **No parallel evaluation**: Sequential queries only
+3. **Fixed precision**: Six decimal places for inputs
+4. **No derivative information**: Pure black-box setting
+
+### Failure Modes
+
+| Mode                  | Description                 | Affected Functions   |
+| --------------------- | --------------------------- | -------------------- |
+| Premature convergence | Stopped exploring too early | F2, F8               |
+| Overshoot             | Step size too large         | F3 (R8-R9)           |
+| Wrong direction       | Gradient estimate incorrect | F6 (multiple rounds) |
+| Plateau trap          | Cannot escape local optimum | F8                   |
 
 ---
 
 ## Ethical Considerations
 
-### Potential Harms
-- None identified (synthetic educational data)
-- No personal data involved
+### Transparency and Reproducibility
 
-### Limitations Leading to Potential Harms
-- N/A for this educational context
+**Documentation provided**:
 
-### Mitigations
-- N/A
+- Complete query-output history (queries.csv)
+- Per-round decision rationale
+- Strategy evolution narrative
+- Failure acknowledgment (not just successes)
 
----
+**Reproducibility requirements**:
 
-## Limitations & Biases
+- Initial seed data (from course portal)
+- This model card and datasheet
+- Jupyter notebooks with analysis code
+- Random seeds where applicable
 
-### Known Limitations
+### Real-World Adaptation Considerations
 
-1. **Smoothness Assumption**
-   - GP with RBF kernel assumes smooth functions
-   - May underperform on discontinuous or highly non-linear functions
+When applying this approach to real problems:
 
-2. **Curse of Dimensionality**
-   - GP uncertainty estimates degrade in high dimensions
-   - F7 (6D) and F8 (8D) show slower convergence
+1. **Validate smoothness assumption** before committing to gradient-based
+   exploitation
+2. **Include replication** for noisy functions
+3. **Budget for exploration** even when exploitation seems promising
+4. **Document failures** as thoroughly as successes
+5. **Consider multi-start** to escape local optima
 
-3. **Local Optima**
-   - F1's extremely weak signal suggests possible multi-modal structure
-   - GP may get trapped in local optima
+### Limitations of Transparency
 
-4. **Computational Cost**
-   - GP inference is O(n³) — not scalable beyond ~1000 points
-   - Not an issue for this project (~50 points max)
-
-5. **Kernel Hyperparameter Sensitivity**
-   - Results depend on kernel choice and hyperparameter optimisation
-   - Default settings may not suit all functions
-
-### Biases
-
-1. **Exploration Bias in Early Rounds**
-   - Initial GP predictions are highly uncertain
-   - May over-explore before sufficient data accumulated
-
-2. **Exploitation Bias in Later Rounds**
-   - As GP becomes more confident, exploration may be under-prioritised
-   - Risk of missing global optima
+- **Implicit decisions**: Some strategic choices made intuitively, not formally
+  documented
+- **Hindsight bias**: Post-hoc rationale may overstate intentionality
+- **Single trajectory**: Cannot assess strategy variance without comparison runs
 
 ---
 
-## Recommendations
+## Technical Specifications
 
-### When to Use This Model
-- Limited function evaluations (expensive queries)
-- Smooth, continuous objective functions
-- Low-to-medium dimensionality (≤6D works well)
-- Need for uncertainty quantification
+### Surrogate Model (Conceptual)
 
-### When to Consider Alternatives
-- Very high dimensionality (>10D): Consider neural network surrogates
-- Discrete/combinatorial inputs: Consider tree-based surrogates
-- Non-smooth functions: Consider random forest surrogates
-- Many observations available: Consider neural networks or ensembles
-
-### Best Practices
-1. Start with exploration-heavy acquisition (high β in UCB)
-2. Gradually shift to exploitation as data accumulates
-3. Monitor for convergence plateaus
-4. Use gradient information from round-by-round changes
-5. Revert to successful regions if exploration fails
-
----
-
-## Caveats & Additional Information
-
-### Interpretability
-- GP provides mean prediction (μ) and uncertainty (σ) at any point
-- Acquisition function values explain why specific points were chosen
-- Kernel lengthscales indicate feature importance
-
-### Updates
-Model updated after each round with new observations:
-```python
-gp.fit(X_updated, Y_updated)
+```
+Gaussian Process with:
+- Kernel: RBF (Radial Basis Function)
+- Length scale: Adaptive per function
+- Noise: Assumed low (no WhiteKernel in practice)
 ```
 
-### Contact
-Imperial College Business School, Executive Education programme
+### Acquisition Strategy
+
+```
+Implicit UCB with:
+- High β (exploration) in early rounds
+- Low β (exploitation) in later rounds
+- Function-specific adaptation
+```
+
+### Decision Rules
+
+```python
+if output > previous_best:
+    continue_direction(step_size)
+elif output < previous_best and recent_failures > 2:
+    revert_to_best_query()
+else:
+    try_small_perturbation()
+```
+
+---
+
+## Version History
+
+| Version | Round  | Key Changes                      |
+| ------- | ------ | -------------------------------- |
+| 0.1     | R1-R2  | Initial exploration strategy     |
+| 0.2     | R3-R5  | Added gradient estimation        |
+| 0.3     | R6-R8  | Implemented revert-to-best       |
+| 1.0     | R9-R10 | Final: breakthrough exploitation |
+
+---
+
+## Citation
+
+If referencing this approach:
+
+```
+BBO Capstone Optimisation Strategy, v1.0
+Imperial College Business School, ML & AI Programme
+Modules 12-21, 2025-2026
+```
+
+---
+
+## Contact
+
+For questions or feedback:
+
+- GitHub repository issues
+- Course discussion board
