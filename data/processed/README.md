@@ -37,15 +37,17 @@ np.save("data/processed/function_1/inputs.npy", X_updated)
 np.save("data/processed/function_1/outputs.npy", Y_updated)
 ```
 
-## Current Status
+## Final Status (Round 13 — COMPLETE)
 
-| Function | Initial Points | Total Points (Round 5) |
-|----------|----------------|------------------------|
-| F1 | 10 | 15 |
-| F2 | 10 | 15 |
-| F3 | 15 | 20 |
-| F4 | 30 | 35 |
-| F5 | 20 | 25 |
-| F6 | 20 | 25 |
-| F7 | 30 | 35 |
-| F8 | 40 | 45 |
+| Function | Initial Points | Total Points (Round 13) |
+|----------|----------------|-------------------------|
+| F1 | 10 | 23 |
+| F2 | 10 | 23 |
+| F3 | 15 | 28 |
+| F4 | 30 | 43 |
+| F5 | 20 | 33 |
+| F6 | 20 | 33 |
+| F7 | 30 | 43 |
+| F8 | 40 | 53 |
+
+**Total observations across all functions: 279**

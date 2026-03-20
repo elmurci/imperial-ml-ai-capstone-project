@@ -2,15 +2,7 @@
 
 ## Non-Technical Summary
 
-This project tackles the challenge of finding optimal inputs for eight unknown
-"black-box" functions—systems where we can observe outputs but cannot see the
-internal workings. Using Bayesian optimisation over 10 weekly iterations, we
-intelligently balanced exploring new regions against exploiting known promising
-areas, making informed decisions with limited data. Key breakthroughs included
-F1's diagonal discovery (3000x improvement), F4's sign reversal from negative to
-positive, and F5's remarkable climb from 1088 to 3512. This mirrors real-world
-scenarios like drug discovery, manufacturing tuning, or hyperparameter
-optimisation where each evaluation is expensive.
+This project tackles the challenge of finding optimal inputs for eight unknown "black-box" functions—systems where we can observe outputs but cannot see the internal workings. Using Bayesian optimisation over 13 weekly iterations, we intelligently balanced exploring new regions against exploiting known promising areas, making informed decisions with limited data. Key breakthroughs included F1's diagonal discovery (from zero to 1.40e-4), F4's sign reversal from -4.03 to +0.181, and F5's remarkable climb from 1,089 to 3,934 (+261%). This mirrors real-world scenarios like drug discovery, manufacturing tuning, or hyperparameter optimisation where each evaluation is expensive.
 
 ---
 
@@ -25,27 +17,24 @@ optimisation where each evaluation is expensive.
 
 ## Results Overview
 
-### Final Performance (After Round 10)
+### Final Performance (After Round 13)
 
 | Function | Dims | Initial Best | Final Best | Improvement     | Strategy            |
 | -------- | ---- | ------------ | ---------- | --------------- | ------------------- |
-| **F1**   | 2D   | 0            | 1.68e-5    | 🚀 Breakthrough | Diagonal discovery  |
+| **F1**   | 2D   | 0            | 1.40e-4    | 🚀 Breakthrough | Diagonal discovery  |
 | **F2**   | 2D   | 0.611        | 0.651      | +6.5%           | Region refinement   |
 | **F3**   | 3D   | -0.035       | -0.0275    | +21.4%          | Gradient following  |
-| **F4**   | 4D   | -4.03        | 0.161      | 🚀 Sign change  | Consistent gradient |
-| **F5**   | 4D   | 1088.86      | 3512.03    | +222.5%         | Push to limits      |
-| **F6**   | 5D   | -0.71        | -0.669     | +5.8%           | Revert-to-best      |
-| **F7**   | 6D   | 1.365        | 1.394      | +2.1%           | Small perturbations |
-| **F8**   | 8D   | 9.60         | 9.787      | +1.9%           | Plateau refinement  |
+| **F4**   | 4D   | -4.03        | +0.181     | 🚀 Sign reversal| Consistent gradient |
+| **F5**   | 4D   | 1,089        | 3,934      | **+261%**       | Boundary pushing    |
+| **F6**   | 5D   | -0.71        | -0.635     | +10.6%          | Revert-to-best      |
+| **F7**   | 6D   | 1.365        | 1.397      | +2.3%           | Small perturbations |
+| **F8**   | 8D   | 9.60         | 9.792      | +2.0%           | Plateau refinement  |
 
 ### Key Breakthroughs
 
-- **F1 (Round 9)**: After 8 rounds of near-zero outputs, discovered the optimum
-  lies along x=y diagonal
-- **F4 (Rounds 5-10)**: Achieved sign reversal from -4.03 to +0.161 through
-  consistent gradient following
-- **F5 (All rounds)**: Remarkable monotonic improvement from 1088 to 3512
-  (+222%)
+- **F1 (Rounds 8-11)**: After 8 rounds of near-zero outputs, discovered the optimum lies along x=y diagonal
+- **F4 (Rounds 5-13)**: Achieved sign reversal from -4.03 to +0.181 through consistent gradient following
+- **F5 (All rounds)**: Outstanding monotonic improvement from 1,089 to 3,934 (+261%)
 
 ---
 
@@ -68,7 +57,7 @@ bbo-capstone/
 │   ├── acquisition.py        # Acquisition functions
 │   └── utils.py              # Helper functions
 └── results/
-    ├── queries.csv           # Complete query history
+    ├── queries.csv           # Complete query history (13 rounds)
     └── figures/              # Visualisations
 ```
 
@@ -96,26 +85,24 @@ jupyter notebook notebooks/bbo_optimization.ipynb
 
 | Phase               | Rounds | Approach                    | Key Insight                             |
 | ------------------- | ------ | --------------------------- | --------------------------------------- |
-| Exploration         | 1-2    | Corner/boundary testing     | Exploitation often more reliable        |
-| Gradient Estimation | 3-5    | Directional inference       | F4/F5 have clear gradients              |
-| Exploitation        | 6-8    | Refine + revert-to-best     | Know when to abandon failed exploration |
-| Breakthrough        | 9-10   | Aggressive gradient pursuit | F1 diagonal, F5 limits                  |
+| Exploration         | 1-3    | Corner/boundary testing     | Exploitation often more reliable        |
+| Gradient Estimation | 4-6    | Directional inference       | F4/F5 have clear gradients              |
+| Refinement          | 7-9    | Refine + revert-to-best     | Know when to abandon failed exploration |
+| Exploitation        | 10-13  | Aggressive gradient pursuit | F1 diagonal, F5 boundary pushing        |
 
 ### Core Techniques
 
-1. **Gaussian Process Surrogate**: Approximate unknown functions with
-   uncertainty estimates
+1. **Gaussian Process Surrogate**: Approximate unknown functions with uncertainty estimates
 2. **Acquisition Functions**: UCB/EI to balance exploration-exploitation
 3. **Gradient Following**: Use round-over-round changes to infer direction
 4. **Revert-to-Best**: Abandon failed refinements, return to proven queries
+5. **Per-Function Strategies**: Tailored approaches based on observed behaviour
 
 ---
 
 ## Data Access
 
-Initial `.npy` data files are provided by Imperial College Business School via
-the course portal (Mini-lesson 12.8). They are not stored in this repository due
-to licensing.
+Initial `.npy` data files are provided by Imperial College Business School via the course portal (Mini-lesson 12.8). They are not stored in this repository due to licensing.
 
 ```python
 import numpy as np
@@ -127,13 +114,10 @@ Y = np.load("data/raw/function_1/initial_outputs.npy")
 
 ## Lessons Learned
 
-1. **Exploitation > Exploration** with limited queries — aggressive exploration
-   often wasted budget
-2. **Function-specific strategies** essential — one-size-fits-all approaches
-   fail
-3. **Revert-to-best** critical for noisy functions (F2, F6)
-4. **Breakthroughs unpredictable** — F1's diagonal discovery came after 8 failed
-   rounds
+1. **Exploitation > Exploration** with limited queries — aggressive exploration often wasted budget
+2. **Function-specific strategies** essential — one-size-fits-all approaches fail
+3. **Revert-to-best** critical for noisy functions (F2, F3, F6)
+4. **Breakthroughs unpredictable** — F1's diagonal discovery came after 8 failed rounds
 5. **Diminishing returns** real for high-dimensional functions (F7, F8)
 
 ---
