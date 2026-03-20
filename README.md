@@ -134,4 +134,6 @@ Y = np.load("data/raw/function_1/initial_outputs.npy")
 
 ## License
 
-Educational use only, as part of Imperial College Executive Education programme.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**Note**: Initial seed data (.npy files) are provided by Imperial College Business School and are not included in this repository due to licensing restrictions.
